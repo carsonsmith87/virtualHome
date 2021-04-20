@@ -153,7 +153,7 @@ namespace StoryGenerator
                 startcolor = rend.material.color;
                 rend.material.color = Color.yellow;
             }
-            
+
         }
 
         void OnMouseExit()
@@ -262,9 +262,14 @@ namespace StoryGenerator
                 currentGraph = currentGraphCreator.UpdateGraph(transform);
             }
             bool keyPressed = false;
-            bool leftExecuted = false;
-            bool rightExecuted = false;
             bool click = false;
+            EnvironmentObject obj = null;
+            string objectName = null;
+            int objectId = -1;
+            Vector3 prevPoint = new Vector3();
+            EnvironmentObject obj1 = null;
+            EnvironmentObject obj2 = null;
+            EnvironmentObject obj3 = null;
 
             ExecutionConfig config = new ExecutionConfig();
             config.walk_before_interaction = false;
@@ -278,7 +283,7 @@ namespace StoryGenerator
             //recorders[0].CamCtrls[cameras.IndexOf(currentCamera)].Activate(true);
             currentCamera.transform.localPosition = currentCamera.transform.localPosition + new Vector3(0, -0.15f, 0.1f);
 
-            
+
             // Buttons: grab, open, putleft, putright, close
 
             // Create canvas and event system
@@ -338,7 +343,7 @@ namespace StoryGenerator
                 //TODO: add going backwards and clean up Input code
 
 
-                //TODO: add camera movement
+                //camera movement
                 if (Input.GetKeyDown(KeyCode.O))
                 {
                     Debug.Log("move cam up");
@@ -356,11 +361,76 @@ namespace StoryGenerator
                     if (EventSystem.current.IsPointerOverGameObject())
                     {
                         click = true;
+                        Debug.Log("event system name " + EventSystem.current.currentSelectedGameObject.name);
+
+                        if (goOpen.activeSelf && EventSystem.current.currentSelectedGameObject.name == "OpenButton")
+                        {
+                            ISet<Utilities.ObjectState> objStates = obj.states;
+                            if (objStates.Contains(Utilities.ObjectState.CLOSED))
+                            {
+                                Debug.Log("opened");
+                                button_created = false;
+                                objStates.Remove(Utilities.ObjectState.CLOSED);
+                                objStates.Add(Utilities.ObjectState.OPEN);
+                                string action = String.Format("<char0> [open] <{0}> ({1})", objectName, objectId);
+                                scriptLines.Add(action);
+                                keyPressed = true;
+                                goOpen.SetActive(false);
+                            }
+                            else if (objStates.Contains(Utilities.ObjectState.OPEN))
+                            {
+                                Debug.Log("closed");
+                                button_created = false;
+                                objStates.Remove(Utilities.ObjectState.OPEN);
+                                objStates.Add(Utilities.ObjectState.CLOSED);
+                                string action = String.Format("<char0> [close] <{0}> ({1})", objectName, objectId);
+                                scriptLines.Add(action);
+                                keyPressed = true;
+                                goOpen.SetActive(false);
+                            }
+                            
+                        }
+                        else if (goGrab.activeSelf && EventSystem.current.currentSelectedGameObject.name == "GrabButton")
+                        {
+                            button_created = false;
+                            string action = String.Format("<char0> [grab] <{0}> ({1})", objectName, objectId);
+                            Debug.Log(action);
+                            scriptLines.Add(action);
+                            keyPressed = true;
+                            goGrab.SetActive(false);
+                        }
+                        else if (goPutLeft.activeSelf && EventSystem.current.currentSelectedGameObject.name == "PutLeftButton")
+                        {
+                            Debug.Log("put left at " + prevPoint);
+                            button_created = false;
+
+                            string putPos = String.Format("{0},{1},{2}", prevPoint.x.ToString(), prevPoint.y.ToString(), prevPoint.z.ToString());
+
+                            string action = String.Format("<char0> [put] <{2}> ({3}) <{0}> ({1}) {4}", objectName, objectId, obj2.class_name, obj2.id, putPos);
+                            Debug.Log(action);
+                            scriptLines.Add(action);
+
+                            keyPressed = true;
+                            goPutLeft.SetActive(false);
+                        }
+                        else if (goPutRight.activeSelf && EventSystem.current.currentSelectedGameObject.name == "PutRightButton")
+                        {
+                            Debug.Log("put right at " + prevPoint);
+                            button_created = false;
+
+                            string putPos = String.Format("{0},{1},{2}", prevPoint.x.ToString(), prevPoint.y.ToString(), prevPoint.ToString());
+
+                            string action = String.Format("<char0> [put] <{2}> ({3}) <{0}> ({1}) {4}", objectName, objectId, obj3.class_name, obj3.id, putPos);
+                            Debug.Log(action);
+                            scriptLines.Add(action);
+
+                            keyPressed = true;
+                            goPutRight.SetActive(false);
+                        }
                         Debug.Log("button clicked");
                     }
                     if (button_created)
                     {
-
                         goOpen.SetActive(false);
                         goOpen.GetComponent<Button>().onClick.RemoveAllListeners();
                         goGrab.SetActive(false);
@@ -371,6 +441,7 @@ namespace StoryGenerator
                         goPutRight.GetComponent<Button>().onClick.RemoveAllListeners();
                         button_created = false;
                         pointer.SetActive(false);
+                        Debug.Log("button deactivated");
                         //break;
                         //continue;
                     }
@@ -381,9 +452,10 @@ namespace StoryGenerator
                         Ray ray = currentCamera.ScreenPointToRay(mouseClickPosition);
                         bool hit = Physics.Raycast(ray, out rayHit);
                         //Debug.DrawRay(ray.origin, ray.direction, Color.green, 20, true);
-
+                        Debug.Log("click false");
                         if (hit)
                         {
+                            Debug.Log("hit!");
                             click = true;
                             Transform t = rayHit.transform;
                             pointer.SetActive(true);
@@ -397,7 +469,6 @@ namespace StoryGenerator
                                 t = t.parent;
                             }
 
-                            EnvironmentObject obj;
                             try
                             {
                                 currentGraphCreator.objectNodeMap.TryGetValue(t.gameObject, out obj);
@@ -406,11 +477,11 @@ namespace StoryGenerator
                             {
                                 obj = null;
                                 Debug.Log("ERROR GETTING OBJECT");
-                                Debug.Log(t.gameObject.name);
+                                //Debug.Log(t.gameObject.name);
                             }
 
-                            string objectName = obj.class_name;
-                            int objectId = obj.id;
+                            objectName = obj.class_name;
+                            objectId = obj.id;
                             Debug.Log("object name " + objectName);
 
                             rend = t.GetComponent<Renderer>();
@@ -431,18 +502,16 @@ namespace StoryGenerator
                             Vector3 point = currentCamera.ScreenToWorldPoint(new Vector3(mousePos.x, mousePos.y, currentCamera.nearClipPlane));
                             Debug.Log("point " + point);
 
-                            //TODO: grabbing/putting with right and left hands
+                            // grabbing/putting with right and left hands
                             State currentState = this.CurrentStateList[0];
                             GameObject rh = currentState.GetGameObject("RIGHT_HAND_OBJECT");
                             GameObject lh = currentState.GetGameObject("LEFT_HAND_OBJECT");
-                            EnvironmentObject obj1;
-                            EnvironmentObject obj2;
-                            EnvironmentObject obj3;
+
                             currentGraphCreator.objectNodeMap.TryGetValue(characters[0].gameObject, out obj1);
                             Character character_graph;
                             currentGraphCreator.characters.TryGetValue(obj1, out character_graph);
 
-                            if (objProperties.Contains("CAN_OPEN") && !goOpen.activeSelf)
+                            if (objProperties.Contains("CAN_OPEN") && !goOpen.activeSelf && (rh == null || lh == null))
                             {
                                 //TODO: fix highlight
                                 /*if (rend != null)
@@ -463,8 +532,9 @@ namespace StoryGenerator
                                     Button buttonOpen = goOpen.GetComponent<Button>();
                                     goOpen.GetComponent<RectTransform>().SetInsetAndSizeFromParentEdge(RectTransform.Edge.Left, mousePos.x - width / 2, width);
                                     goOpen.GetComponent<RectTransform>().SetInsetAndSizeFromParentEdge(RectTransform.Edge.Top, pheight, height);
-
+                                    //goOpen.GetComponent<RectTransform>().anchoredPosition = mousePos;
                                     button_created = true;
+                                    /*
                                     buttonOpen.onClick.AddListener(() =>
                                     {
                                         Debug.Log("opened");
@@ -477,7 +547,7 @@ namespace StoryGenerator
                                         keyPressed = true;
 
                                         buttonOpen.onClick.RemoveAllListeners();
-                                    });
+                                    });*/
                                 }
                                 else if (objStates.Contains(Utilities.ObjectState.OPEN))
                                 {
@@ -490,9 +560,9 @@ namespace StoryGenerator
                                     Button buttonOpen = goOpen.GetComponent<Button>();
                                     goOpen.GetComponent<RectTransform>().SetInsetAndSizeFromParentEdge(RectTransform.Edge.Left, mousePos.x - width / 2, width);
                                     goOpen.GetComponent<RectTransform>().SetInsetAndSizeFromParentEdge(RectTransform.Edge.Top, pheight, height);
-
+                                    //goOpen.GetComponent<RectTransform>().anchoredPosition = mousePos;
                                     button_created = true;
-
+                                    /*
                                     buttonOpen.onClick.AddListener(() =>
                                     {
                                         button_created = false;
@@ -506,12 +576,12 @@ namespace StoryGenerator
                                         keyPressed = true;
 
                                         buttonOpen.onClick.RemoveAllListeners();
-                                    });
+                                    });*/
                                 }
 
 
                             }
-                            else if (objProperties.Contains("GRABBABLE") && !goGrab.activeSelf)
+                            else if (objProperties.Contains("GRABBABLE") && !goGrab.activeSelf && (rh == null || lh == null))
                             {
                                 Debug.Log("grab");
 
@@ -530,8 +600,8 @@ namespace StoryGenerator
                                 goGrab.SetActive(true);
                                 Button buttonGrab = goGrab.GetComponent<Button>();
                                 goGrab.GetComponent<RectTransform>().SetInsetAndSizeFromParentEdge(RectTransform.Edge.Left, mousePos.x - width / 2, width);
-                                goOpen.GetComponent<RectTransform>().SetInsetAndSizeFromParentEdge(RectTransform.Edge.Top, pheight, height);
-
+                                goGrab.GetComponent<RectTransform>().SetInsetAndSizeFromParentEdge(RectTransform.Edge.Top, pheight, height);
+                                //goGrab.GetComponent<RectTransform>().anchoredPosition = mousePos;
                                 button_created = true;
 
                                 buttonGrab.onClick.AddListener(() =>
@@ -564,7 +634,9 @@ namespace StoryGenerator
 
                                     Button buttonPutLeft = goPutLeft.GetComponent<Button>();
                                     goPutLeft.GetComponent<RectTransform>().SetInsetAndSizeFromParentEdge(RectTransform.Edge.Left, mousePos.x - width / 2, width);
-                                    goPutLeft.GetComponent<RectTransform>().SetInsetAndSizeFromParentEdge(RectTransform.Edge.Bottom, mousePos.y + 60, 80);
+                                    goPutLeft.GetComponent<RectTransform>().SetInsetAndSizeFromParentEdge(RectTransform.Edge.Top, mousePos.y + 60, 80);
+                                    //goPutLeft.GetComponent<RectTransform>().anchoredPosition = mousePos;
+                                    prevPoint = rayHit.point;
                                     button_created = true;
 
                                     buttonPutLeft.onClick.AddListener(() =>
@@ -578,7 +650,6 @@ namespace StoryGenerator
                                         Debug.Log(action);
                                         scriptLines.Add(action);
 
-                                        leftExecuted = true;
                                         goPutLeft.SetActive(false);
                                         keyPressed = true;
 
@@ -595,8 +666,9 @@ namespace StoryGenerator
                                     Button buttonPutRight = goPutRight.GetComponent<Button>();
 
                                     goPutRight.GetComponent<RectTransform>().SetInsetAndSizeFromParentEdge(RectTransform.Edge.Left, mousePos.x - width / 2, width);
-                                    goPutRight.GetComponent<RectTransform>().SetInsetAndSizeFromParentEdge(RectTransform.Edge.Bottom, mousePos.y - 60, 80);
-                                    //TODO: are these buttons in the right location?
+                                    goPutRight.GetComponent<RectTransform>().SetInsetAndSizeFromParentEdge(RectTransform.Edge.Top, mousePos.y - 60, 80);
+                                    //goPutRight.GetComponent<RectTransform>().anchoredPosition = mousePos;
+                                    prevPoint = rayHit.point;
                                     button_created = true;
 
                                     buttonPutRight.onClick.AddListener(() =>
@@ -604,14 +676,12 @@ namespace StoryGenerator
                                         Debug.Log("put right at " + rayHit.point);
                                         button_created = false;
 
-
                                         string putPos = String.Format("{0},{1},{2}", rayHit.point.x.ToString(), rayHit.point.y.ToString(), rayHit.point.z.ToString());
 
                                         string action = String.Format("<char0> [put] <{2}> ({3}) <{0}> ({1}) {4}", objectName, objectId, obj3.class_name, obj3.id, putPos);
                                         Debug.Log(action);
                                         scriptLines.Add(action);
 
-                                        rightExecuted = true;
                                         goPutRight.SetActive(false);
                                         keyPressed = true;
 
@@ -645,25 +715,13 @@ namespace StoryGenerator
                     Debug.Log("key pressed");
                     goOpen.SetActive(false);
                     goGrab.SetActive(false);
-
-                    if (leftExecuted)
-                    {
-                        goPutLeft.SetActive(false);
-                        leftExecuted = false;
-                    }
-                    if (rightExecuted)
-                    {
-                        goPutRight.SetActive(false);
-                        rightExecuted = false;
-                    }
-                    
-                    
+                    goPutLeft.SetActive(false);
+                    goPutRight.SetActive(false);
 
                     keyPressed = false;
                     click = false;
                     Debug.Log("action executed");
                     pointer.SetActive(false);
-
 
                 }
 

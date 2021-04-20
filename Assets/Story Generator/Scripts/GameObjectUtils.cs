@@ -10,7 +10,8 @@ namespace StoryGenerator.Utilities
     {
         public static Transform GetRoomTransform(Transform t)
         {
-            while (t != null) {
+            while (t != null)
+            {
                 if (t.CompareTag(Tags.TYPE_ROOM))
                     return t;
                 t = t.parent;
@@ -23,7 +24,8 @@ namespace StoryGenerator.Utilities
         {
             Transform t = src;
 
-            while (t != null) {
+            while (t != null)
+            {
                 if (t.gameObject == go)
                     return true;
                 t = t.parent;
@@ -64,7 +66,8 @@ namespace StoryGenerator.Utilities
         private static bool CheckBounds_nmo(GameObject go, ref Bounds bnd)
         {
             NavMeshObstacle nmo = go.GetComponent<NavMeshObstacle>();
-            if (nmo != null) {
+            if (nmo != null)
+            {
                 bnd = CreateBounds(go, nmo.center, nmo.size);
                 return true;
             }
@@ -74,11 +77,15 @@ namespace StoryGenerator.Utilities
         private static bool CheckBounds_collider(GameObject go, ref Bounds bnd)
         {
             BoxCollider bc = go.GetComponent<BoxCollider>();
-            if (bc != null) {
-                if (bc.bounds.extents != Vector3.zero) { // bound property returns zero extents on prefabs
+            if (bc != null)
+            {
+                if (bc.bounds.extents != Vector3.zero)
+                { // bound property returns zero extents on prefabs
                     bnd = bc.bounds;
                     return true;
-                } else { // If this is a prefab
+                }
+                else
+                { // If this is a prefab
                     bnd = CreateBounds(go, bc.center, bc.size);
                     return true;
                 }
@@ -121,7 +128,8 @@ namespace StoryGenerator.Utilities
         private static bool CheckBounds_renderer(GameObject go, ref Bounds bnd)
         {
             Renderer rdr = go.GetComponent<Renderer>();
-            if (rdr != null && rdr.bounds.extents != Vector3.zero) {
+            if (rdr != null && rdr.bounds.extents != Vector3.zero)
+            {
                 bnd = rdr.bounds;
                 return true;
             }
@@ -250,7 +258,7 @@ namespace StoryGenerator.Utilities
             const float putInDirFactor = 0.9f;
 
             List<Vector3> result = new List<Vector3>();
-            
+
             if (srcBounds.extents == Vector3.zero || destBounds.extents == Vector3.zero)
                 return result;
 
@@ -259,9 +267,12 @@ namespace StoryGenerator.Utilities
             Vector3 srcCenter = srcBounds.center;
 
             dir.y = 0;
-            if (putInside) {
+            if (putInside)
+            {
                 dir *= putInDirFactor;
-            } else {
+            }
+            else
+            {
                 dir.Normalize();
                 dir *= putCenterDistance;
             }
@@ -294,9 +305,9 @@ namespace StoryGenerator.Utilities
 
                         if (HitFlatSurface(srcBounds, srcDelta, goDest, out hity))
                         {
-                            GameObject prim = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-                            prim.transform.position = new Vector3(x, 0.0f, z);
-                            prim.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);
+                            //GameObject prim = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+                            //prim.transform.position = new Vector3(x, 0.0f, z);
+                            //prim.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);
 
                             float yDelta = hity - (srcBounds.min.y + srcDelta.y);
                             Vector3 delta = srcDelta + new Vector3(0, yDelta, 0);
@@ -312,7 +323,7 @@ namespace StoryGenerator.Utilities
             else // clickPos specified
             {
                 // obtain x and z values from the click position
-                
+
 
                 float x = clickPos.Value.x;
                 float z = clickPos.Value.z;
@@ -349,10 +360,10 @@ namespace StoryGenerator.Utilities
         // hitHeight is y coordinate of hit points
         public static bool HitFlatSurface(Bounds goBounds, Vector3 goDelta, GameObject destGo, out float hitHeight)
         {
-            
+
 
             Bounds b = new Bounds(goBounds.center + goDelta + 0.02f * Vector3.up, goBounds.extents);
-            
+
             Vector3 bMin = b.min;
             Vector3 bMax = b.max;
 
@@ -376,10 +387,13 @@ namespace StoryGenerator.Utilities
 
             if (!Physics.Raycast(p, Vector3.down, out hit)) return false;
 
-            if (hitTransform == null) {
+            if (hitTransform == null)
+            {
                 hitTransform = hit.transform;
                 yHit = hit.point.y;
-            } else {
+            }
+            else
+            {
                 if (hitTransform != hit.transform) return false;
             }
 
@@ -393,7 +407,8 @@ namespace StoryGenerator.Utilities
         {
             Collider[] colliders = Physics.OverlapBox(bounds.center + delta + upDelta * Vector3.up, bounds.extents);
 
-            foreach (Collider co in colliders) {
+            foreach (Collider co in colliders)
+            {
                 if (!GameObjectUtils.IsInPath(exception, co.transform))
                     return true;
             }
@@ -403,8 +418,9 @@ namespace StoryGenerator.Utilities
         public static Bounds GetRoomBounds(GameObject room)
         {
             Bounds bounds = new Bounds();
-            
-            foreach (GameObject go in ScriptUtils.FindAllObjects(room.transform)) {
+
+            foreach (GameObject go in ScriptUtils.FindAllObjects(room.transform))
+            {
                 Bounds goBounds = GetBounds(go);
 
                 if (goBounds.extents == Vector3.zero)
@@ -424,8 +440,10 @@ namespace StoryGenerator.Utilities
             NavMeshAgent nma = go.GetComponent<NavMeshAgent>();
             List<Vector3> result = new List<Vector3>();
 
-            for (float r = 0.0f; r <= PutCenterDistance; r += 0.3f) {  // advance radii by 10 cm
-                for (int i = 0; i < 20; i++) {                      // angle quantization is 360/20 = 18 degrees
+            for (float r = 0.0f; r <= PutCenterDistance; r += 0.3f)
+            {  // advance radii by 10 cm
+                for (int i = 0; i < 20; i++)
+                {                      // angle quantization is 360/20 = 18 degrees
                     float phi = 2 * Mathf.PI * i / 20;
                     float x = center.x + r * Mathf.Cos(phi);
                     float z = center.z + r * Mathf.Sin(phi);
@@ -434,7 +452,8 @@ namespace StoryGenerator.Utilities
                     Vector3 cEnd = new Vector3(x, nma.height - nma.radius + ObstructionHeight, z);
 
                     // Check for space
-                    if (!Physics.CheckCapsule(cStart, cEnd, nma.radius)) {
+                    if (!Physics.CheckCapsule(cStart, cEnd, nma.radius))
+                    {
                         result.Add(new Vector3(x, 0, z));
                     }
                 }
